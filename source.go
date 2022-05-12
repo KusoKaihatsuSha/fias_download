@@ -3,6 +3,7 @@ package main
 import (
 	"archive/zip"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -27,13 +28,14 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	"time"
-
-	. "github.com/ulvham/helper"
 )
 
 const (
-	logo = "Icon.png"
+	logo = "files/Icon.png"
 )
+
+var configFile = "data.json"
+var logFile = "logs.txt"
 
 type Download struct {
 	Information           Information
@@ -99,15 +101,6 @@ type Result struct {
 	done bool
 }
 
-type FabricWorkersObj interface {
-	init()
-	worker()
-	fillWorkers(frun, fres, interface{})
-	createWorkerPool()
-	result()
-	end()
-}
-
 type ListVersions []struct {
 	VersionID          int    `json:"VersionId"`
 	TextVersion        string `json:"TextVersion"`
@@ -171,9 +164,6 @@ type Downloader struct {
 	FuncRes func(interface{})
 }
 
-type DownloaderO interface {
-}
-
 type Gui struct {
 	Form      fyne.Window
 	Widget    *fyne.Container
@@ -187,6 +177,7 @@ type Gui struct {
 	Action    interface{}
 	DefSize   fyne.Size
 	Elements  *ElementsForm
+	Config    string
 }
 
 type GuiElement struct {
@@ -194,18 +185,6 @@ type GuiElement struct {
 	Title   string
 	Parent  *Gui
 	Bind    func(interface{})
-}
-
-type GuiO interface {
-	init()
-	show()
-	addElement()
-	addElementNewEdit()
-	addElementNewPushButton()
-}
-
-type GuiElementO interface {
-	init()
 }
 
 type frun func(interface{}) bool
@@ -226,6 +205,8 @@ type ElementsFormValue struct {
 	Page28  string
 }
 
+// ElementsForm type
+// contained information about elements on the form
 type ElementsForm struct {
 	Tab     *container.AppTabs `Name:"Tab" Page:"Tab"`
 	Page1   *container.TabItem `Name:"Main" Page:"Main"`
@@ -250,9 +231,11 @@ type ElementsForm struct {
 	Page261 *container.TabItem `Name:"delta type" Page:"Settings" Default:"FiasDeltaDbfURL"`
 }
 
-var p = fmt.Printf
-var p_ = fmt.Println
+var printf = fmt.Printf
+var echo = fmt.Println
 
+// init()
+// initialization data mainPage
 func (o *Gui) init() {
 	o.Items = make(map[string]fyne.CanvasObject)
 	o.ItemsText = make(map[string]interface{})
@@ -268,7 +251,9 @@ func (o *Gui) init() {
 	o.mainPage()
 }
 
-func xTake(type_ string, typetype_ string) string {
+// xTake(string, string) string
+// Find element on Form
+func xTake(type_, typetype_ string) string {
 	tmp, _ := reflect.TypeOf(*new(ElementsForm)).FieldByName(type_)
 	if val, ex := tmp.Tag.Lookup(typetype_); ex {
 		return val
@@ -276,16 +261,22 @@ func xTake(type_ string, typetype_ string) string {
 	return ""
 }
 
+// addETo(*fyne.Container, fyne.CanvasObject) *fyne.CanvasObject
+// add element on Form
 func (o *Gui) addETo(obj *fyne.Container, item fyne.CanvasObject) *fyne.CanvasObject {
 	obj.Add(item)
 	return &item
 }
 
+// addETo(*fyne.Container, fyne.CanvasObject) *fyne.CanvasObject
+// add element on Form on Tabs
 func (o *Gui) addEToT(obj *container.AppTabs, item *container.TabItem) *container.TabItem {
 	obj.Append(item)
 	return item
 }
 
+// mainPage()
+// create mainPage
 func (o *Gui) mainPage() {
 	o.Widget.Objects = nil
 	o.Action.(*Downloader).Go = o
@@ -381,6 +372,8 @@ func (o *Gui) mainPage() {
 
 }
 
+// SaveJson()
+// save data to config file
 func (o *Downloader) SaveJson() {
 	nn := ElementsFormValue{}
 	nn.Page20 = o.Go.Elements.Page20.Content.(*widget.Entry).Text
@@ -397,12 +390,14 @@ func (o *Downloader) SaveJson() {
 	nn.Page27 = o.Go.Elements.Page27.Content.(*widget.Slider).Value
 	nn.Page28 = o.Go.Elements.Page28.Content.(*widget.Entry).Text
 	all, _ := json.MarshalIndent(nn, "", "  ")
-	ioutil.WriteFile("data.json", all, 0775)
+	ioutil.WriteFile(configFile, all, 0775)
 }
 
+// LoadJson()
+// get config file data
 func (o *Downloader) LoadJson() {
 	nn := ElementsFormValue{}
-	b, _ := ioutil.ReadFile("data.json")
+	b, _ := ioutil.ReadFile(configFile)
 	json.Unmarshal(b, &nn)
 	o.Go.Elements.Page20.Content.(*widget.Entry).SetText(nn.Page20)
 	o.Go.Elements.Page21.Content.(*widget.Check).SetChecked(nn.Page21)
@@ -418,6 +413,8 @@ func (o *Downloader) LoadJson() {
 
 }
 
+// settingsTabPage(*container.TabItem)
+// create settings tab
 func (o *Gui) settingsTabPage(tab *container.TabItem) {
 	o.Elements.Page27.Content.(*widget.Slider).OnChanged = o.opSli("")
 	o.Elements.Page25.Content.(*widget.Entry).OnSubmitted = o.opFolder(o.Elements.Page25)
@@ -426,6 +423,8 @@ func (o *Gui) settingsTabPage(tab *container.TabItem) {
 	o.Action.(*Downloader).clickload()
 }
 
+// opSli(string) func(float64)
+// slider update
 func (o *Gui) opSli(s string) func(float64) {
 	return func(x float64) {
 		o.Elements.Page27.Text = fmt.Sprintf("%g", x)
@@ -433,6 +432,8 @@ func (o *Gui) opSli(s string) func(float64) {
 	}
 }
 
+// opFolder(*container.TabItem) func(string)
+// dialog popup with change folder. Press 'Enter' for action
 func (o *Gui) opFolder(s *container.TabItem) func(string) {
 	return func(string) {
 		dialog.ShowFolderOpen(func(t fyne.ListableURI, err error) {
@@ -441,18 +442,22 @@ func (o *Gui) opFolder(s *container.TabItem) func(string) {
 				if strings.Contains(t.Path(), `/`) {
 					syml = `/`
 				}
-				s.Content.(*widget.Entry).SetText(t.Path() + syml + strings.Split(s.Text, "(")[0] + syml) //.URI().String()[7:]
+				s.Content.(*widget.Entry).SetText(t.Path() + syml + strings.Split(s.Text, "(")[0] + syml)
 			}
 		}, o.Form)
 	}
 }
 
+// ChooseFile(fyne.URIReadCloser, error)
+// crop text URL to setting
 func (o *Gui) ChooseFile(t fyne.URIReadCloser, err error) {
 	if t != nil {
 		o.Items["save_full"].(*widget.Entry).SetText(t.URI().String()[7:])
 	}
 }
 
+// turn(bool)
+// show/hide elements
 func (o *Downloader) turn(val bool) {
 	if val {
 		o.Go.Elements.Button2.Hide()
@@ -468,6 +473,8 @@ func (o *Downloader) turn(val bool) {
 	}
 }
 
+// xBool(interface{})
+// wrapper around not Bool
 func xBool(s interface{}) bool {
 	switch type_ := s.(type) {
 	case string:
@@ -488,6 +495,8 @@ func xBool(s interface{}) bool {
 	return false
 }
 
+// clickdef()
+// create tabs
 func (o *Downloader) clickdef() {
 	o.Go.Elements.Page20.Content.(*widget.Entry).SetText(xTake("Page20", "Default"))
 	o.Go.Elements.Page21.Content.(*widget.Check).SetChecked(xBool(xTake("Page21", "Default")))
@@ -503,19 +512,27 @@ func (o *Downloader) clickdef() {
 	o.Go.Elements.Page28.Content.(*widget.Entry).SetText(xTake("Page28", "Default"))
 }
 
+// clicksave()
+// click save config
 func (o *Downloader) clicksave() {
 	o.SaveJson()
 }
 
+// clickload()
+// click load config
 func (o *Downloader) clickload() {
 	o.LoadJson()
 }
 
+// show()
+// show form
 func (o *Gui) show() {
 	o.Form.ShowAndRun()
 }
 
-func (o *Downloader) cl(dlonly bool, full bool) {
+// cl(bool, bool)
+// start downloading click
+func (o *Downloader) cl(dlonly, full bool) {
 	o.FuncRun = o.Fill
 	o.FuncRes = o.Statisticf
 	o.GetList()
@@ -528,21 +545,29 @@ func (o *Downloader) cl(dlonly bool, full bool) {
 	o.SaveLogs()
 }
 
+// click()
+// click download and unpack
 func (o *Downloader) click() {
 	o.OnlyDl = false
 	o.clickodl()
 }
 
+// clickdl()
+// click download
 func (o *Downloader) clickdl() {
 	o.OnlyDl = true
 	o.clickodl()
 }
 
+// clickodl()
+// click download and unpack considering o.OnlyDl
 func (o *Downloader) clickodl() {
 	o.Go.Elements.Page3.Content = container.NewVBox()
 	o.cl(o.OnlyDl, o.Go.Elements.Page21.Content.(*widget.Check).Checked)
 }
 
+// addElement(fyne.CanvasObject, string, bool)
+// add element on form
 func (o *Gui) addElement(item fyne.CanvasObject, name string, show bool) {
 	o.Items[name] = item
 	o.Widget.Add(item)
@@ -552,6 +577,8 @@ func (o *Gui) addElement(item fyne.CanvasObject, name string, show bool) {
 	}
 }
 
+// init()
+// init the runnable flags
 func (o *Downloader) init() {
 	flag.BoolVar(&o.Gui, "gui", true, "gui mode or hide cli mode")
 	flag.BoolVar(&o.OnlyDl, "o", false, "if true, only download, not unpacked")
@@ -559,6 +586,8 @@ func (o *Downloader) init() {
 	flag.Parse()
 }
 
+// getWebSize(string) int64
+// try get file size by url
 func (o *Downloader) getWebSize(url_ string) int64 {
 	client := &http.Client{}
 	if o.Go.Elements.Page22.Content.(*widget.Check).Checked {
@@ -568,7 +597,7 @@ func (o *Downloader) getWebSize(url_ string) int64 {
 	for i := 1; i < 500; i++ {
 		response, err := client.Get(url_)
 		if err != nil {
-			p_("Error while downloading", url_, "-", err)
+			echo("Error while downloading", url_, "-", err)
 			return 0
 		}
 		time.Sleep(3 * time.Millisecond)
@@ -581,10 +610,12 @@ func (o *Downloader) getWebSize(url_ string) int64 {
 	return 0
 }
 
+// GetFullData() *ListVersions
+// get list files from server
 func (o *Downloader) GetFullData() *ListVersions {
 	req, err := http.NewRequest("POST", o.Go.Elements.Page20.Content.(*widget.Entry).Text, nil)
 	if err != nil {
-		p_(err)
+		echo(err)
 	}
 	client := &http.Client{}
 	if o.Go.Elements.Page22.Content.(*widget.Check).Checked {
@@ -593,26 +624,26 @@ func (o *Downloader) GetFullData() *ListVersions {
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		p_(err)
+		echo(err)
 		time.Sleep(1 * time.Second)
 	}
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		p_(err)
+		echo(err)
 	}
 	info := new(ListVersions)
 	json.Unmarshal(b, info)
 	return info
 }
 
+// Fill(interface{}) bool
+// get data
 func (o *Downloader) Fill(fileFias interface{}) bool {
-
 	text := make(map[string]string)
 	keys := reflect.ValueOf(&fileFias.(*Archive).Def).Elem()
 	for i := 0; i < keys.NumField(); i++ {
 		text[keys.Type().Field(i).Name] = keys.Field(i).String()
 	}
-
 	t, _ := time.Parse("02.01.2006", text["Date"])
 	if o.Go.Elements.Page21.Content.(*widget.Check).Checked || o.FullCli {
 		fileFias.(*Archive).Name = o.Go.Elements.Page251.Content.(*widget.Entry).Text + "[" + t.Format("2006-01-02") + "]"
@@ -658,14 +689,17 @@ func (o *Downloader) Fill(fileFias interface{}) bool {
 	return true
 }
 
+// GetList()
+// fill list
 func (o *Downloader) GetList() {
 	i := 0
 	o.Items = make(map[string]*Archive)
 	for id, textdef := range *o.GetFullData() {
-		if id < ToInt(fmt.Sprintf("%g", o.Go.Elements.Page27.Content.(*widget.Slider).Value)) {
+		count, _ := strconv.Atoi(fmt.Sprintf("%g", o.Go.Elements.Page27.Content.(*widget.Slider).Value))
+		if id < count {
 			fileFias := new(Archive)
 			fileFias.Def = textdef
-			o.Items[ToStr(i)] = fileFias
+			o.Items[fmt.Sprintf("%d", i)] = fileFias
 			i++
 		}
 		if o.Go.Elements.Page21.Content.(*widget.Check).Checked || o.FullCli {
@@ -675,6 +709,8 @@ func (o *Downloader) GetList() {
 	o.FillWorkers()
 }
 
+// fileSize(string) int64
+// get file size
 func fileSize(path string) int64 {
 	fi, err := os.Stat(path)
 	var fileSize int64
@@ -684,12 +720,16 @@ func fileSize(path string) int64 {
 	return fileSize
 }
 
+// WriteCounter type
+// using Reader interface
 type WriteCounter struct {
 	Total   int64
 	Current *widget.ProgressBar
 	Parent  *Archive
 }
 
+// Write([]byte) (int, error)
+// needed interface metod of Reader
 func (wc *WriteCounter) Write(p []byte) (int, error) {
 	n := len(p)
 	wc.Total += int64(n)
@@ -697,27 +737,40 @@ func (wc *WriteCounter) Write(p []byte) (int, error) {
 	return n, nil
 }
 
+// PrintProgress()
+// update downloading
 func (wc WriteCounter) PrintProgress() {
 	val := (wc.Total * 100 / wc.Parent.dSize)
 	val2 := (wc.Total * 10 / wc.Parent.dSize)
 	wc.Current.SetValue(float64(val))
-	p("\rDownloading.%s", strings.Repeat(".", int(val2))) //p("\rDownloading...%s", ToStr(int(val)))
+	printf("\rDownloading.%s", strings.Repeat(".", int(val2))) //p("\rDownloading...%s", ToStr(int(val)))
 }
 
+// Statisticf(interface{})
+// logging
 func (o *Downloader) Statisticf(ar interface{}) {
 	o.ToLogs("find " + ar.(Result).job.element.(*Archive).Name)
 }
 
+// Statisticd(interface{})
+// logging
 func (o *Downloader) Statisticd(ar interface{}) {
 	o.ToLogs("download " + ar.(Result).job.element.(*Archive).Name)
 }
 
+// Statisticu(interface{})
+// logging
 func (o *Downloader) Statisticu(ar interface{}) {
 	o.ToLogs("unzip " + ar.(Result).job.element.(*Archive).Name)
 }
 
+// Download()
+// downloading
 func (o *Downloader) Download() {
 	for _, item := range o.Items {
+		if strings.Trim(item.dURL, " ") == "" {
+			continue
+		}
 		if o.Go.Elements.Page21.Content.(*widget.Check).Checked || o.FullCli {
 			os.MkdirAll(o.Go.Elements.Page25.Content.(*widget.Entry).Text, 0644)
 		} else {
@@ -740,6 +793,8 @@ func (o *Downloader) Download() {
 	o.FillWorkers()
 }
 
+// Unz(bool)
+// unzipped
 func (o *Downloader) Unz(dlonly bool) {
 	for _, item := range o.Items {
 		item.Dlonly = dlonly
@@ -747,12 +802,12 @@ func (o *Downloader) Unz(dlonly bool) {
 	o.FillWorkers()
 }
 
+// DownloadFile(interface{}) error
+// query and download, init pipe
 func DownloadFile(ar interface{}) error {
-	resp, err := http.Get(ar.(*Archive).dURL)
-	if err != nil {
-		return err
+	if ar.(*Archive).dURL == "" {
+		return errors.New("Empty URL")
 	}
-	defer resp.Body.Close()
 	out, err := os.Create(ar.(*Archive).Result.dURL)
 	if err != nil {
 		return err
@@ -761,15 +816,48 @@ func DownloadFile(ar interface{}) error {
 	counter := &WriteCounter{}
 	counter.Current = ar.(*Archive).Pg
 	counter.Parent = ar.(*Archive)
-	_, err = io.Copy(out, io.TeeReader(resp.Body, counter))
+	pr, pw := io.Pipe()
+	go load(ar.(*Archive).dURL, pw, int64(0), counter)
+	_, err = io.Copy(out, pr)
 	if err != nil {
 		return err
 	}
 	return err
 }
 
+// load(string, *io.PipeWriter, int64, *WriteCounter)
+// chunking downloading 25mb
+func load(url string, w *io.PipeWriter, begin int64, counter *WriteCounter) {
+	defer w.Close()
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		log.Println(err.Error())
+	}
+	end := begin + 25000000
+	header := fmt.Sprintf("bytes=%v-%v", begin, end)
+	req.Header.Set("Range", header)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusPartialContent { // OR you can use code 206
+		current, err := io.Copy(w, io.TeeReader(resp.Body, counter))
+		if current == int64(0) || err != nil {
+			return
+		}
+		load(url, w, begin+current, counter)
+	} else {
+		if resp.StatusCode != 416 {
+
+		}
+		return
+	}
+}
+
+// DownloadFile(interface{}) bool
+// wrap for downloading
 func (o *Downloader) DownloadFile(ar interface{}) bool {
-	p_(ar.(*Archive).dURL)
 	if !ar.(*Archive).Unziponly {
 		DownloadFile(ar)
 	}
@@ -781,29 +869,41 @@ func (o *Downloader) DownloadFile(ar interface{}) bool {
 	return true
 }
 
+// Unzip(interface{}) bool
+// unzip
 func (o *Downloader) Unzip(ar interface{}) bool {
-	if !ar.(*Archive).Dlonly {
-		arr := ar.(*Archive)
+	arr := ar.(*Archive)
+	if strings.Trim(arr.dURL, " ") == "" {
+		arr.Flfull.SetText("EMPTY")
+		arr.Fl.SetText("ERROR! EMPTY URL")
+		arr.UZip.SetValue(0)
+		arr.Pg.SetValue(0)
+	}
+	if !arr.Dlonly {
 		reader, err := zip.OpenReader(arr.Result.dURL)
 		if err != nil {
+			arr.Fl.SetText("ERROR. REPEAT DOWNLOADING.")
 			return false
 		}
+		defer reader.Close()
 		if err := os.MkdirAll(arr.FolderUnzip, 0755); err != nil {
 			return false
 		}
 		arr.UZip.Max = float64(len(reader.File))
-		re := regexp.MustCompile(`\d\d`)
+		re := regexp.MustCompile(`^\d{2,3}`)
 		for _, file := range reader.File {
-			checking0 := re.Match([]byte(file.Name))
-			arr.Fl.SetText(file.Name)
+			pathext := ""
+			newFilename := file.Name
+			arr.Fl.SetText(newFilename)
 			arr.dSize = file.FileInfo().Size()
 			arr.UZip.SetValue(arr.UZip.Value + 1)
 			regions := strings.Split(o.Go.Elements.Page28.Content.(*widget.Entry).Text, ";")
-			if checking0 {
+			if re.Match([]byte(newFilename)) {
+				pathext = re.FindString(newFilename)
+				mkd := filepath.Join(arr.FolderUnzip, pathext)
 				count_ := len(regions)
 				for _, val := range regions {
-					checking, _ := regexp.Match(val, []byte(file.Name))
-					if !checking {
+					if pathext != val {
 						count_--
 					}
 				}
@@ -811,8 +911,10 @@ func (o *Downloader) Unzip(ar interface{}) bool {
 					arr.Fl.SetText("")
 					continue
 				}
+				os.MkdirAll(mkd, 644)
+				newFilename = re.ReplaceAllString(newFilename, "")
 			}
-			path := filepath.Join(arr.FolderUnzip, file.Name)
+			path := filepath.Join(arr.FolderUnzip, pathext, newFilename)
 			if file.FileInfo().IsDir() {
 				os.MkdirAll(path, file.Mode())
 				continue
@@ -840,26 +942,37 @@ func (o *Downloader) Unzip(ar interface{}) bool {
 	return true
 }
 
+// RemoveFile(string, bool) bool
+// remove file
 func RemoveFile(path string, isserver bool) bool {
 	err := os.Remove(path)
 	return err == nil
 }
 
+// CloseFile(interface{})
+// close file
 func CloseFile(file interface{}) {
 	switch file_ := file.(type) {
 	case *os.File:
 		file_.Close()
 	default:
-		p("Error! close")
+		echo("Error! close")
 	}
 }
 
+// ToLogs(string)
+// logging
 func (obj *Downloader) ToLogs(text string) {
 	obj.Logs = append(obj.Logs, text)
 }
 
+// SaveLogs()
+// logging
 func (obj *Downloader) SaveLogs() {
-	f, _ := os.OpenFile("logs.txt", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	f, err := os.OpenFile(logFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Println(err.Error())
+	}
 	defer f.Close()
 	log.SetOutput(f)
 	for _, text := range obj.Logs {
@@ -867,6 +980,8 @@ func (obj *Downloader) SaveLogs() {
 	}
 }
 
+// FillWorkers()
+// create task
 func (o *Downloader) FillWorkers() {
 	work := new(FabricWorkers)
 	work.startTime = time.Now()
@@ -878,6 +993,8 @@ func (o *Downloader) FillWorkers() {
 	work.endTime = time.Now()
 }
 
+// Init()
+// init worker
 func (obj *FabricWorkers) Init() {
 	obj.Jobs = make(chan Job, runtime.NumCPU())
 	obj.Results = make(chan Result, runtime.NumCPU())
@@ -886,10 +1003,14 @@ func (obj *FabricWorkers) Init() {
 	obj.Done = make(chan bool)
 }
 
+// End()
+// task complete
 func (obj *FabricWorkers) End() {
 	<-obj.Done
 }
 
+// Worker()
+// worker action
 func (obj *FabricWorkers) Worker() {
 	for job := range obj.Jobs {
 		output := Result{job, job.id(job.element)}
@@ -898,6 +1019,8 @@ func (obj *FabricWorkers) Worker() {
 	obj.Wg.Done()
 }
 
+// CreateWorkerPool()
+// run workers
 func (obj *FabricWorkers) CreateWorkerPool() {
 	for i := 0; i < runtime.NumCPU(); i++ {
 		obj.Wg.Add(1)
@@ -907,6 +1030,8 @@ func (obj *FabricWorkers) CreateWorkerPool() {
 	close(obj.Results)
 }
 
+// FillWorkers(frun, fres, interface{})
+// work with task
 func (obj *FabricWorkers) FillWorkers(run frun, res fres, elements interface{}) {
 	if reflect.ValueOf(elements).Kind() == reflect.Map {
 		v := reflect.ValueOf(elements).MapRange()
@@ -919,6 +1044,8 @@ func (obj *FabricWorkers) FillWorkers(run frun, res fres, elements interface{}) 
 	close(obj.Jobs)
 }
 
+// Result()
+// get result
 func (obj *FabricWorkers) Result() {
 	for result := range obj.Results {
 		result.job.idr(result)

@@ -1,32 +1,65 @@
-# Программа для помощи в скачивании базы ФИАС с сайта https://fias.nalog.ru/
-# App fo helping download FIAS base from https://fias.nalog.ru/
-	
-		-gui         Запускать в режиме автоматического скачивания без GUI по сохранённым настройкам
+# Downloader FIAS/GAR from
+App for helping downloading archives with **FIAS/GAR** files from https://fias.nalog.ru
 
-		-o           Скачивать, но не распаковывать
+`* App can be using with GUI mode or CLI mode`
 
-		-full        Запускать скачивание полного ФИАС, иначе дельты
+`* App using configuration file, which could be create on tab 'settings' in GUI mode or you can create this file manually, for example seeing inside test files.`
 
-	Список настроек:
+### **Available flags**
 
-	Address API - Адрес сервиса для получения актуальных ссылок на скачивание
+> Run GUI/CLI mode
 
-	Full mode - Режим скачивания полной версии
+`-gui=true` or `-gui=false`  
 
-	Proxy - Использование базового прокси(не kerberos)
+> Only download mode
 
-	Proxy IP - ip адрес прокси сервера
+`-o=true` or `-o=false`
 
-	Format - Формат архива (!!! Реализовано только для ZIP)
+> Download full archive or delta archive 
 
-	Path full(press Enter) - При нажании на ВВОД при выборе поля позволяет выбрать путь сохранения полного ФИАС
+`-full=true` or `-full=false`
 
-	Path delta(press Enter) - При нажании на ВВОД при выборе поля позволяет выбрать путь сохранения дельты ФИАС
+### **Build**
 
-	Count last - Позволяет выбрать количество скачиваемых элементов
+`go build -ldflags "-s -w -H=windowsgui"`
 
-	Regions(by - ;) - При вводе номеров регионов РФ в формате "01;02" при разархивации будут пропущены файлы, содержащие прочие регионы (!!! Не пропускается распаковка файлов 3х значных кодов регионов, если указаны двузначные содержащиеся в 3х значных)
+### **Description of config file:**
 
-	full type - Название типа полного архива в сервисе ФИАС (ручной ввод)
+```ini
+Address API             - Address fias API
+Full mode               - Full  base download mode
+Proxy                   - proxy using(NOT kerberos)
+Proxy IP                - proxy ip
+Format                  - Archive type (!use zip, other not worked)
+Path full(press Enter)  - folder path full base
+Path delta(press Enter) - folder path delta base
+Count last              - How many delta bases want download
+Regions(by              - ;) - use format "01;02" for num region filter
+full type               - type full base in API
+delta type              - type delta base in API
+```
 
-	delta type - Название типа дельты в сервисе ФИАС (ручной ввод)
+**Workable config example:**
+
+```json
+{
+  "Page20": "https://fias.nalog.ru/WebServices/Public/GetAllDownloadFileInfo",
+  "Page21": false,
+  "Page22": false,
+  "Page23": "0.0.0.0",
+  "Page24": ".zip",
+  "Page25": "fias_gar\\full\\",
+  "Page251": "GarXMLFullURL",
+  "Page26": "fias_gar\\delta\\",
+  "Page261": "GarXMLDeltaURL",
+  "Page27": 7,
+  "Page28": "01;02"
+}
+```
+
+Screenshots:
+
+
+<div style="width:50%">
+<img src="/pictures/001.png" >
+</div>
