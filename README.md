@@ -1,4 +1,4 @@
-# Downloader FIAS/GAR from
+# Downloader FIAS/GAR
 App for helping downloading archives with **FIAS/GAR** files from https://fias.nalog.ru
 
 `* App can be using with GUI mode or CLI mode`
