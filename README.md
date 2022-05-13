@@ -28,15 +28,15 @@ App for helping downloading archives with **FIAS/GAR** files from https://fias.n
 ```ini
 Address API             - Address fias API
 Full mode               - Full  base download mode
-Proxy                   - proxy using(NOT kerberos)
-Proxy IP                - proxy ip
+Proxy                   - Proxy using(NOT kerberos)
+Proxy IP                - Proxy ip
 Format                  - Archive type (!use zip, other not worked)
-Path full(press Enter)  - folder path full base
-Path delta(press Enter) - folder path delta base
+Path full(press Enter)  - Folder path full base
+Path delta(press Enter) - Folder path delta base
 Count last              - How many delta bases want download
-Regions(by              - ;) - use format "01;02" for num region filter
-full type               - type full base in API
-delta type              - type delta base in API
+Regions(;)              - Use format "01;02" for num region filter
+full type               - Type full base in API
+delta type              - Type delta base in API
 ```
 
 **Workable config example:**
