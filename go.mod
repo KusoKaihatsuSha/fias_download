@@ -1,4 +1,4 @@
-module fias_downloader
+module github.com/KusoKaihatsuSha/fias_download
 
 go 1.18
 
