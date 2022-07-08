@@ -1,4 +1,4 @@
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![godoc](https://godoc.org/github.com/KusoKaihatsuSha/fias_download?status.svg)](https://godoc.org/github.com/KusoKaihatsuSha/fias_download) [![Go Report Card](https://goreportcard.com/badge/github.com/KusoKaihatsuSha/fias_download)](https://goreportcard.com/report/github.com/KusoKaihatsuSha/fias_download)
+[![godoc](https://godoc.org/github.com/KusoKaihatsuSha/fias_download?status.svg)](https://godoc.org/github.com/KusoKaihatsuSha/fias_download) [![Go Report Card](https://goreportcard.com/badge/github.com/KusoKaihatsuSha/fias_download)](https://goreportcard.com/report/github.com/KusoKaihatsuSha/fias_download)
 
 # Downloader FIAS/GAR
 App for helping downloading archives with **FIAS/GAR** files from https://fias.nalog.ru
